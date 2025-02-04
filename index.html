@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yoga Pose Generator</title>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.23.0/full/pyodide.js"></script>
+</head>
+<body>
+    <h1>Yoga Pose Generator</h1>
+    <button onclick="generateYogaPose()" id="generateButton" disabled>Generate Yoga Pose</button>
+    <p id="pose"></p>
+    <script>
+        let yogaPoses = [];
+        let pyodideLoaded = false;
+
+        // Fetch yoga poses from a remote JSON file
+        async function fetchYogaPoses() {
+            try {
+                console.log("Fetching yoga poses...");
+                const response = await fetch('https://raw.githubusercontent.com/Kizito00/Python-Code/refs/heads/main/yoga-pose.json');
+                const data = await response.json();
+                yogaPoses = data.poses; // Assuming the JSON has a "poses" array
+                console.log("Yoga poses fetched successfully!");
+            } catch (error) {
+                console.error("Error fetching yoga poses:", error);
+                document.getElementById('pose').innerText = "Failed to load yoga poses. Please try again later.";
+            }
+        }
+
+        // Initialize Pyodide
+        async function loadPyodideAndPackages() {
+            try {
+                console.log("Loading Pyodide...");
+                let pyodide = await loadPyodide();
+                console.log("Pyodide loaded successfully!");
+                window.pyodide = pyodide;
+                pyodideLoaded = true;
+                document.getElementById('generateButton').disabled = false; // Enable the button
+            } catch (error) {
+                console.error("Error loading Pyodide:", error);
+                document.getElementById('pose').innerText = "Failed to load Pyodide. Please check your internet connection and browser compatibility.";
+            }
+        }
+
+        // Function to generate a yoga pose
+        async function generateYogaPose() {
+            if (!pyodideLoaded) {
+                document.getElementById('pose').innerText = "Pyodide is still loading. Please wait...";
+                return;
+            }
+
+            if (yogaPoses.length === 0) {
+                document.getElementById('pose').innerText = "Loading yoga poses...";
+                await fetchYogaPoses();
+            }
+
+            if (yogaPoses.length === 0) {
+                document.getElementById('pose').innerText = "No yoga poses available. Please try again later.";
+                return;
+            }
+
+            const pythonCode = `
+import random
+
+yoga_poses = ${JSON.stringify(yogaPoses)}
+myline = random.choice(yoga_poses)
+myline
+            `;
+
+            try {
+                console.log("Generating yoga pose...");
+                const result = await pyodide.runPythonAsync(pythonCode);
+                document.getElementById('pose').innerText = `Here's a yoga pose: ${result}`;
+            } catch (error) {
+                console.error("Error generating yoga pose:", error);
+                document.getElementById('pose').innerText = "Failed to generate a yoga pose. Please try again.";
+            }
+        }
+
+        // Load Pyodide and fetch yoga poses when the page loads
+        loadPyodideAndPackages();
+        fetchYogaPoses();
+    </script>
+</body>
+</html>
